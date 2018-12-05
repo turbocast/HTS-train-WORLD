@@ -15,6 +15,12 @@ if test ! -f "$PERL"; then
 	AC_MSG_ERROR(Can't find perl)
 fi
 
+# php
+#AC_PATH_PROG([PHP], [php], [/usr/bin], [$PATH:/usr/bin])
+#if test ! -f "$PHP"; then
+#	AC_MSG_ERROR(Can't find php)
+#fi
+
 # wc
 AC_PATH_PROG([WC], [wc], [/usr/bin], [$PATH:/usr/bin])
 if test ! -f "$WC"; then
@@ -456,7 +462,7 @@ AC_ARG_VAR([SAMPFREQ],[sampling frequency in Hz (default=48000)])
 AC_ARG_VAR([FREQWARP],[frequency warping factor (default=0.77)])
 AC_ARG_VAR([GAMMA],[pole/zero weight factor (0: mel-cepstral analysis  1: LPC analysis  2,3,...,N: mel-generalized cepstral (MGC) analysis) (default=0)])
 AC_ARG_VAR([MGCORDER],[order of MGC analysis (default=59 for cepstral form, default=12 for LSP form)])
-AC_ARG_VAR([BAPORDER],[order of BAP analysis (default=24)])
+AC_ARG_VAR([BAPORDER],[order of BAP analysis (default=23)])
 AC_ARG_VAR([LNGAIN],[use logarithmic gain instead of linear gain (default=1)])
 AC_ARG_VAR([LOWERF0],[lower limit for F0 extraction in Hz (default=195)])
 AC_ARG_VAR([UPPERF0],[upper limit for F0 extraction in Hz (default=740)])
@@ -524,7 +530,7 @@ if test -z "$MGCORDER"; then
 fi
 
 if test -z "$BAPORDER"; then
-	BAPORDER=24
+	BAPORDER=23
 fi
 
 if test -z "$LNGAIN"; then

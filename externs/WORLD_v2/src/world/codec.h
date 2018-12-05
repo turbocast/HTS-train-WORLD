@@ -36,7 +36,7 @@ int GetNumberOfAperiodicities(int fs);
 //   coded_aperiodicity : Coded aperiodicity
 //-----------------------------------------------------------------------------
 void CodeAperiodicity(const double * const *aperiodicity, int f0_length,
-  int fs, int fft_size, double **coded_aperiodicity);
+  int fs, int fft_size, int number_of_aperiodicities, double **coded_aperiodicity);
 
 //-----------------------------------------------------------------------------
 // DecodeAperiodicity decodes the coded aperiodicity.
@@ -51,7 +51,7 @@ void CodeAperiodicity(const double * const *aperiodicity, int f0_length,
 //   aperiodicity       : Decoded aperiodicity
 //-----------------------------------------------------------------------------
 void DecodeAperiodicity(const double * const *coded_aperiodicity,
-  int f0_length, int fs, int fft_size, double **aperiodicity);
+  int f0_length, int fs, int fft_size, int number_of_aperiodicities, double **aperiodicity);
 
 //-----------------------------------------------------------------------------
 // CodeSpectralEnvelope codes the spectral envelope.

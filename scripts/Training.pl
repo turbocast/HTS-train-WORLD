@@ -722,7 +722,7 @@ if ($WGEN1) {
 $useMSPF = 0;    # turn off modulation spectrum-based postfilter for following step
 
 # HHEd (converting mmfs to the HTS voice format)
-if ( $CONVM && !$usestraight && !$useworld ) {
+if ( $CONVM ) {
    print_time("converting mmfs to the HTS voice format");
 
    # models and trees
@@ -753,7 +753,9 @@ if ( $CONVM && !$usestraight && !$useworld ) {
    }
 
    # low-pass filter
-   make_lpf();
+   if ( !$usestraight && !$useworld) {
+      make_lpf();
+   }
 
    # make HTS voice
    make_htsvoice( "$voice", "${dset}_${spkr}" );
@@ -1817,7 +1819,11 @@ sub make_htsvoice($$) {
    print HTSVOICE "SAMPLING_FREQUENCY:${sr}\n";
    print HTSVOICE "FRAME_PERIOD:${fs}\n";
    print HTSVOICE "NUM_STATES:${nState}\n";
-   print HTSVOICE "NUM_STREAMS:" . ( ${ nPdfStreams { 'cmp' } } + 1 ) . "\n";
+   if ( !$usestraight && !$useworld) {
+      print HTSVOICE "NUM_STREAMS:" . ( ${ nPdfStreams { 'cmp' } } + 1 ) . "\n";
+   } else {
+      print HTSVOICE "NUM_STREAMS:${nPdfStreams{'cmp'}}\n";
+   }
    print HTSVOICE "STREAM_TYPE:";
 
    for ( $i = 0 ; $i < @cmp ; $i++ ) {
@@ -1829,6 +1835,8 @@ sub make_htsvoice($$) {
    }
    if ( !$usestraight && !$useworld) {
       print HTSVOICE ",LPF\n";
+   } else {
+      print HTSVOICE "\n";
    }
    print HTSVOICE "FULLCONTEXT_FORMAT:${fclf}\n";
    print HTSVOICE "FULLCONTEXT_VERSION:${fclv}\n";
@@ -1896,7 +1904,7 @@ sub make_htsvoice($$) {
    }
    foreach $type (@cmp) {
       $tmp = get_stream_name($type);
-      if ( $tmp eq "MCP" ) {
+      if ( $tmp eq "MCP" || $tmp eq "MGC" ) {
          print HTSVOICE "OPTION[${tmp}]:ALPHA=$fw\n";
       }
       elsif ( $tmp eq "LSP" ) {
@@ -2114,7 +2122,7 @@ sub get_stream_name($) {
 
    if ( $from eq 'mgc' ) {
       if ( $gm == 0 ) {
-         $to = "MCP";
+         $to = "MGC";
       }
       else {
          $to = "LSP";
@@ -2383,7 +2391,7 @@ sub gen_wave($) {
          print " Synthesizing a speech waveform from $base.mgc, $base.lf0, and $base.bap... ";
          $frame_period = 1000.0 * $fs / $sr;
          # synthesize waveform
-         shell("$WORLD/synth $lf0 $mgc $bap \"$gendir/$base.wav\" $frame_period 2048 48000 $ordr{'mgc'}");
+         shell("$WORLD/synth $lf0 $mgc $bap \"$gendir/$base.wav\" $frame_period 2048 48000 $ordr{'mgc'} $ordr{'bap'}");
          print "done\n";
       }
    }

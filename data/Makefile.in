@@ -191,9 +191,11 @@ features:
 				rm -f $${base}.m $${base}.wav $${base}.f0 $${base}.ap $${base}.sp; \
 			else \
 				MGCDIM=`expr $(MGCORDER) + 1`; \
+				BAPDIM=`expr $(BAPORDER) + 1`; \
+				FRAMEPERIOD=`expr $(FRAMESHIFT) \* 1000 / $(SAMPFREQ)` \
 				FRAMESHIFTMS=`echo $(FRAMESHIFT) | $(X2X) +af | $(SOPR) -m 1000 -d $(SAMPFREQ) | $(X2X) +fa`; \
 				$(RAW2WAV) -s $${SAMPKHZ} -d . $${raw}; \
-				$(WORLD)/analysis "$${base}.wav" "lf0/$${base}.lf0" "mgc/$${base}.mgc" "bap/$${base}.bap" $(MGCDIM); \
+				$(WORLD)/analysis "$${base}.wav" "lf0/$${base}.lf0" "mgc/$${base}.mgc" "bap/$${base}.bap" $${FRAMEPERIOD} $(FFTLEN) $${MGCDIM} $${BAPDIM}; \
 				if [ -n "`$(NAN) lf0/$${base}.lf0`" ]; then \
 					echo " Failed to extract features from $${raw}: f0 not found"; \
 					rm -f lf0/$${base}.lf0; \

@@ -1,13 +1,14 @@
 //-----------------------------------------------------------------------------
 // 
-// Author: Zhizheng Wu (wuzhizheng@gmail.com)
-// Date: 11-03-2016
+// Author: Yuxuan Zhang (hyperzlink@outlook.com)
+// Date: 2018/12/02
 //
-// To extract F0, spectrum and band aperiodicities with WORLD vocoder
+// To extract LF0, MGC and BAP with WORLD vocoder
 //
-// This is modified based on Msanori Morise's test.cpp. Low-dimensional band aperiodicities are used as suggested by Oliver.
+// This is modified based on Msanori Morise's test.cpp.
 //
-// analysis input_waveform F0_file spectrogram_file aperiodicity_file
+// analysis <input wav> <output f0/lf0> <output sp/mgc> <output ap/bap> \
+//    [<frame period> <fft size> <enable compress & spec dimension> <aper dimension>]
 //
 //-----------------------------------------------------------------------------
 
@@ -43,6 +44,7 @@
 
 #include "world/common.h"
 #include "world/constantnumbers.h"
+#include "sptkfunctions.h"
 
 #if (defined (__linux__) || defined(__CYGWIN__) || defined(__APPLE__))
 // Linux porting section: implement timeGetTime() by gettimeofday(),
@@ -246,8 +248,8 @@ void ToFloat(double *input, int len, float *output){
 // dimension  : argv[5] dimension for mgc
 //-----------------------------------------------------------------------------
 int main(int argc, char *argv[]) {
-  if (argc != 5 && argc != 6 && argc != 7 && argc != 8) {
-    printf("Usage: %s <input wav> <output f0/lf0> <output sp/mgc> <output ap/bap> [<frame period> <fft size> <enable compress & dimension>]\n", argv[0]);
+  if (argc != 5 && argc != 6 && argc != 7 && argc != 8 && argc != 9) {
+    printf("Usage: %s <input wav> <output f0/lf0> <output sp/mgc> <output ap/bap> [<frame period> <fft size> <enable compress & spec dimension> <aper dimension>]\n", argv[0]);
     return -2;
   }
 
@@ -312,9 +314,6 @@ int main(int argc, char *argv[]) {
         coded_spectrogram[i][j] /= 2;
       }*/
     }
-    for(int i = 0; i < world_parameters.f0_length; i ++){
-      delete [] world_parameters.spectrogram[i];
-    }
     delete [] world_parameters.spectrogram;
     world_parameters.spectrogram = coded_spectrogram;
   }
@@ -324,14 +323,32 @@ int main(int argc, char *argv[]) {
 
   int number_of_aperiodicities = world_parameters.fft_size / 2 + 1;
   if(argc >= 8 && atoi(argv[7]) != 0){
-    number_of_aperiodicities = GetNumberOfAperiodicities(fs);
+    bool oddApl = false;
+    if(argc >= 9){
+      number_of_aperiodicities = atoi(argv[8]);
+    } else {
+      number_of_aperiodicities = 24;
+    }
+    if(number_of_aperiodicities % 2 == 1){
+      oddApl = true;
+    }
     printf("number of aperiodicities: %d\n", number_of_aperiodicities);
     double **coded_aperiodicity = new double *[world_parameters.f0_length];
-    for (int i = 0; i < world_parameters.f0_length; ++i)
+    for (int i = 0; i < world_parameters.f0_length; ++i){
+      for(int j = 0; j < world_parameters.fft_size / 2 + 1; j ++)
+        world_parameters.aperiodicity[i][j] = world_parameters.aperiodicity[i][j] * 32768.0;
       coded_aperiodicity[i] = new double[number_of_aperiodicities];
-
-    CodeAperiodicity(world_parameters.aperiodicity, world_parameters.f0_length,
-      world_parameters.fs, world_parameters.fft_size, coded_aperiodicity);
+    }
+    for (int i = 0; i < world_parameters.f0_length; ++i){
+      mcep(world_parameters.aperiodicity[i], world_parameters.fft_size / 2 + 1, coded_aperiodicity[i], 
+        oddApl ? number_of_aperiodicities - 1 : number_of_aperiodicities,
+        0.77, 2, 0, 0.001, 1, 1.0E-8, 0.0, 3);
+      if(oddApl){
+        coded_aperiodicity[i][number_of_aperiodicities - 1] = 0;
+      }
+    }
+    CodeSpectralEnvelope(world_parameters.aperiodicity, world_parameters.f0_length, world_parameters.fs,
+      world_parameters.fft_size, number_of_aperiodicities, coded_aperiodicity);
     for(int i = 0; i < world_parameters.f0_length; i ++){
       delete [] world_parameters.aperiodicity[i];
     }

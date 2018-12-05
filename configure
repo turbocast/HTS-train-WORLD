@@ -1464,7 +1464,7 @@ Some influential environment variables:
               (default=0)
   MGCORDER    order of MGC analysis (default=59 for cepstral form, default=12
               for LSP form)
-  BAPORDER    order of BAP analysis (default=24)
+  BAPORDER    order of BAP analysis (default=23)
   LNGAIN      use logarithmic gain instead of linear gain (default=1)
   LOWERF0     lower limit for F0 extraction in Hz (default=195)
   UPPERF0     upper limit for F0 extraction in Hz (default=740)
@@ -2055,6 +2055,12 @@ fi
 if test ! -f "$PERL"; then
 	as_fn_error $? "Can't find perl" "$LINENO" 5
 fi
+
+# php
+#AC_PATH_PROG([PHP], [php], [/usr/bin], [$PATH:/usr/bin])
+#if test ! -f "$PHP"; then
+#	AC_MSG_ERROR(Can't find php)
+#fi
 
 # wc
 # Extract the first word of "wc", so it can be a program name with args.
@@ -4469,7 +4475,7 @@ if test -z "$MGCORDER"; then
 fi
 
 if test -z "$BAPORDER"; then
-	BAPORDER=24
+	BAPORDER=23
 fi
 
 if test -z "$LNGAIN"; then

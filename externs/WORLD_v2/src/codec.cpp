@@ -215,8 +215,7 @@ int GetNumberOfAperiodicities(int fs) {
 }
 
 void CodeAperiodicity(const double * const *aperiodicity, int f0_length,
-    int fs, int fft_size, double **coded_aperiodicity) {
-  int number_of_aperiodicities = GetNumberOfAperiodicities(fs);
+    int fs, int fft_size, int number_of_aperiodicities, double **coded_aperiodicity) {
   double *coarse_frequency_axis = new double[number_of_aperiodicities];
   for (int i = 0; i < number_of_aperiodicities; ++i)
     coarse_frequency_axis[i] = world::kFrequencyInterval * (i + 1.0);
@@ -236,9 +235,8 @@ void CodeAperiodicity(const double * const *aperiodicity, int f0_length,
 }
 
 void DecodeAperiodicity(const double * const *coded_aperiodicity,
-    int f0_length, int fs, int fft_size, double **aperiodicity) {
+    int f0_length, int fs, int number_of_aperiodicities, int fft_size, double **aperiodicity) {
   InitializeAperiodicity(f0_length, fft_size, aperiodicity);
-  int number_of_aperiodicities = GetNumberOfAperiodicities(fs);
   double *frequency_axis = new double[fft_size / 2 + 1];
   for (int i = 0; i <= fft_size / 2; ++i)
     frequency_axis[i] = static_cast<double>(fs) / fft_size * i;
