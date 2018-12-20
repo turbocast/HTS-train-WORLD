@@ -4,7 +4,7 @@
 #           http://hts.sp.nitech.ac.jp/                             #
 # ----------------------------------------------------------------- #
 #                                                                   #
-#  Copyright (c) 2001-2015  Nagoya Institute of Technology          #
+#  Copyright (c) 2001-2017  Nagoya Institute of Technology          #
 #                           Department of Computer Science          #
 #                                                                   #
 #                2001-2008  Tokyo Institute of Technology           #
@@ -45,10 +45,13 @@
 # setting
 SPEAKER = @SPEAKER@
 DATASET = @DATASET@
+QNAME   = @QNAME@
 
 # awk and perl
 AWK  = @AWK@
 PERL = @PERL@
+
+PYTHON = @PYTHON@
 
 # SPTK commands
 X2X     = @X2X@
@@ -63,6 +66,7 @@ PITCH   = @PITCH@
 FRAME   = @FRAME@
 WINDOW  = @WINDOW@
 RAW2WAV = @RAW2WAV@
+BCUT    = @BCUT@
 
 # MATLAB and STRAIGHT
 USESTRAIGHT = @USESTRAIGHT@
@@ -73,6 +77,14 @@ STRAIGHT    = @STRAIGHT@
 USEWORLD = @USEWORLD@
 WORLD    = @WORLD@
 
+# DNN
+USEDNN = @USEDNN@
+
+# Festival commands
+USEUTT    = @USEUTT@
+TEXT2UTT  = @TEXT2UTT@
+DUMPFEATS = @DUMPFEATS@
+
 # speech analysis conditions
 SAMPFREQ   = @SAMPFREQ@   # Sampling frequency (48kHz)
 FRAMELEN   = @FRAMELEN@   # Frame length in point (1200 = 48000 * 0.025)
@@ -82,8 +94,10 @@ NORMALIZE  = @NORMALIZE@  # Normalization -> 0: none  1: by power  2: by magnitu
 FFTLEN     = @FFTLEN@     # FFT length in point
 FREQWARP   = @FREQWARP@   # frequency warping factor
 GAMMA      = @GAMMA@      # pole/zero weight for mel-generalized cepstral (MGC) analysis
+LF0ORDER   = 1            # order of LF0 analysis
 MGCORDER   = @MGCORDER@   # order of MGC analysis
 BAPORDER   = @BAPORDER@   # order of BAP analysis
+VIBORDER   = 1            # order of VIB analysis
 LNGAIN     = @LNGAIN@     # use logarithmic gain rather than linear gain
 LOWERF0    = @LOWERF0@    # lower limit for f0 extraction (Hz)
 UPPERF0    = @UPPERF0@    # upper limit for f0 extraction (Hz)
@@ -92,19 +106,21 @@ UPPERF0    = @UPPERF0@    # upper limit for f0 extraction (Hz)
 MGCWIN  = win/mgc.win
 LF0WIN  = win/lf0.win
 BAPWIN  = win/bap.win
+VIBWIN  = win/vib.win
 NMGCWIN = @NMGCWIN@
 NLF0WIN = @NLF0WIN@
 NBAPWIN = @NBAPWIN@
+NVIBWIN = @NVIBWIN@
 
 all: analysis labels
 
-analysis: features cmp
+analysis: features cmp ffo stats
 
 labels: mlf list scp
 
 features:
 	# Extracting features from raw audio
-	mkdir -p mgc lf0 bap
+	mkdir -p mgc lf0 bap vib
 	SAMPKHZ=`echo $(SAMPFREQ) | $(X2X) +af | $(SOPR) -m 0.001 | $(X2X) +fa`; \
 	for raw in raw/$(DATASET)_$(SPEAKER)_*.raw; do \
 		base=`basename $${raw} .raw`; \
@@ -195,20 +211,32 @@ features:
 				FRAMEPERIOD=`expr $(FRAMESHIFT) \* 1000 / $(SAMPFREQ)` \
 				FRAMESHIFTMS=`echo $(FRAMESHIFT) | $(X2X) +af | $(SOPR) -m 1000 -d $(SAMPFREQ) | $(X2X) +fa`; \
 				$(RAW2WAV) -s $${SAMPKHZ} -d . $${raw}; \
-				$(WORLD)/analysis "$${base}.wav" "lf0/$${base}.lf0" "mgc/$${base}.mgc" "bap/$${base}.bap" $${FRAMEPERIOD} $(FFTLEN) $${MGCDIM} $${BAPDIM}; \
-				if [ -n "`$(NAN) lf0/$${base}.lf0`" ]; then \
-					echo " Failed to extract features from $${raw}: f0 not found"; \
+				$(WORLD)/analysis "$${base}.wav" "lf0/$${base}.lf0" "mgc/$${base}.mgc" "bap/$${base}.bap" $${FRAMEPERIOD} $(FFTLEN) $${MGCDIM} ${BAPDIM}; \
+				$(PYTHON) scripts/Extract.py "$${base}" $${FRAMEPERIOD}; \
+				if [ -s lf0/$${base}.lf0 -a -n "`$(NAN) lf0/$${base}.lf0`" ]; then \
+					echo " Failed to extract features from $${raw}: LF0 error"; \
 					rm -f lf0/$${base}.lf0; \
 				fi; \
-				if [ -n "`$(NAN) mgc/$${base}.mgc`" ]; then \
-					echo " Failed to extract features from $${raw}"; \
-					rm -f mgc/$${base}.mgc; \
+				if [ -s mgc/$${base}.mgc ]; then \
+					#if [ $(LNGAIN) -eq 1 ]; then \
+					#	GAINOPT="-L"; \
+					#fi; \
+					#cat mgc/$${base}.mgc | \
+					#$(LPC2LSP) -m $(MGCORDER) -s $${SAMPKHZ} $${GAINOPT} -n 2048 -p 8 -d 1.0E-08 > mgc/$${base}.mgc; \
+					if [ -n "`$(NAN) mgc/$${base}.mgc`" ]; then \
+						echo " Failed to extract features from $${raw}: MGC error"; \
+						rm -f mgc/$${base}.mgc; \
+					fi; \
 				fi; \
-				if [ -n "`$(NAN) bap/$${base}.bap`" ]; then \
-					echo " Failed to extract features from $${raw}"; \
+				if [ -s bap/$${base}.bap -a -n "`$(NAN) bap/$${base}.bap`" ]; then \
+					echo " Failed to extract features from $${raw}: BAP error"; \
 					rm -f bap/$${base}.bap; \
 				fi; \
-				rm -f $${base}.wav $${base}.f0 $${base}.ap $${base}.sp; \
+				if [ -s vib/$${base}.vib -a -n "`$(NAN) vib/$${base}.vib`" ]; then \
+					echo " Failed to extract features from $${raw}: VIB error"; \
+					rm -f vib/$${base}.vib; \
+				fi; \
+				rm -f $${base}.wav $${base}.f0; \
 			fi; \
 		fi; \
 	done
@@ -246,14 +274,17 @@ cmp:
 			fi; \
 		else \
 			MGCDIM=`expr $(MGCORDER) + 1`; \
-			LF0DIM=1; \
+			LF0DIM=`expr $(LF0ORDER) + 1`; \
 			BAPDIM=`expr $(BAPORDER) + 1`; \
+			VIBDIM=`expr $(VIBORDER) + 1`; \
 			MGCWINDIM=`expr $(NMGCWIN) \* $${MGCDIM}`; \
 			LF0WINDIM=`expr $(NLF0WIN) \* $${LF0DIM}`; \
 			BAPWINDIM=`expr $(NBAPWIN) \* $${BAPDIM}`; \
+			VIBWINDIM=`expr $(NVIBWIN) \* $${VIBDIM}`; \
 			MGCLF0WINDIM=`expr $${MGCWINDIM} + $${LF0WINDIM}`; \
-			BYTEPERFRAME=`expr 4 \* \( $${MGCWINDIM} + $${LF0WINDIM} + $${BAPWINDIM} \)`; \
-			if [ -s mgc/$${base}.mgc -a -s lf0/$${base}.lf0 -a -s bap/$${base}.bap ]; then \
+			MGCLF0BAPWINDIM=`expr $${MGCWINDIM} + $${LF0WINDIM} + $${BAPWINDIM}`; \
+			BYTEPERFRAME=`expr 4 \* \( $${MGCWINDIM} + $${LF0WINDIM} + $${BAPWINDIM} + $${VIBWINDIM} \)`; \
+			if [ -s mgc/$${base}.mgc -a -s lf0/$${base}.lf0 -a -s bap/$${base}.bap -a -s vib/$${base}.vib ]; then \
 				MGCWINS=""; \
 				i=1; \
 				while [ $${i} -le $(NMGCWIN) ]; do \
@@ -275,13 +306,192 @@ cmp:
 					i=`expr $${i} + 1`; \
 				done; \
 				$(PERL) scripts/window.pl $${BAPDIM} bap/$${base}.bap $${BAPWINS} > tmp.bap; \
-				$(MERGE) +f -s 0 -l $${LF0WINDIM} -L $${MGCWINDIM}    tmp.mgc     < tmp.lf0          > tmp.mgc+lf0; \
-				$(MERGE) +f -s 0 -l $${BAPWINDIM} -L $${MGCLF0WINDIM} tmp.mgc+lf0 < tmp.bap          > tmp.cmp; \
+				VIBWINS=""; \
+				i=1; \
+				while [ $${i} -le $(NVIBWIN) ]; do \
+					eval VIBWINS=\"$${VIBWINS} $(VIBWIN)$${i}\"; \
+					i=`expr $${i} + 1`; \
+				done; \
+				$(PERL) scripts/window.pl $${VIBDIM} vib/$${base}.vib $${VIBWINS} > tmp.vib; \
+				$(MERGE) +f -s 0 -l $${LF0WINDIM} -L $${MGCWINDIM}       tmp.mgc         < tmp.lf0          > tmp.mgc+lf0; \
+				$(MERGE) +f -s 0 -l $${BAPWINDIM} -L $${MGCLF0WINDIM}    tmp.mgc+lf0     < tmp.bap          > tmp.mgc+lf0+bap; \
+				$(MERGE) +f -s 0 -l $${VIBWINDIM} -L $${MGCLF0BAPWINDIM} tmp.mgc+lf0+bap < tmp.vib   > tmp.cmp; \
 				$(PERL) scripts/addhtkheader.pl $(SAMPFREQ) $(FRAMESHIFT) $${BYTEPERFRAME} 9 tmp.cmp > cmp/$${base}.cmp; \
-				rm -f tmp.mgc tmp.lf0 tmp.bap tmp.mgc+lf0 tmp.cmp; \
+				rm -f tmp.mgc tmp.lf0 tmp.bap tmp.mgc+lf0 tmp.mgc+lf0+bap tmp.cmp; \
 			fi; \
 		fi; \
 	done
+
+ffo:
+	# Making frame-by-frame DNN outputs from extracted features
+	if [ $(USEDNN) -eq 1 ]; then \
+		mkdir -p ffo; \
+		for raw in raw/$(DATASET)_$(SPEAKER)_*.raw; do \
+			base=`basename $${raw} .raw`; \
+			echo "Making frame-by-frame DNN outputs for $${base}"; \
+			if [ $(USESTRAIGHT) -eq 0 -a $(USEWORLD) -eq 0 ]; then \
+				MGCDIM=`expr $(MGCORDER) + 1`; \
+				LF0DIM=1; \
+				MGCWINDIM=`expr $(NMGCWIN) \* $${MGCDIM}`; \
+				LF0MSDDIM=1; \
+				LF0WINDIM=`expr $(NLF0WIN) \* $${LF0DIM}`; \
+				MGCWINLF0MSDDIM=`expr $${MGCWINDIM} + $${LF0MSDDIM}`; \
+				if [ -s mgc/$${base}.mgc -a -s lf0/$${base}.lf0 ]; then \
+					MGCWINS=""; \
+					i=1; \
+					while [ $${i} -le $(NMGCWIN) ]; do \
+						eval MGCWINS=\"$${MGCWINS} $(MGCWIN)$${i}\"; \
+						i=`expr $${i} + 1`; \
+					done; \
+					$(PERL) scripts/window.pl $${MGCDIM} mgc/$${base}.mgc $${MGCWINS} > $${base}.mgc; \
+					$(SOPR) lf0/$${base}.lf0 -magic -1.0E+10 -m 0.0 -a 1.0 -MAGIC 0.0 > $${base}.lf0.msd; \
+					LF0WINS=""; \
+					i=1; \
+					while [ $${i} -le $(NLF0WIN) ]; do \
+						eval LF0WINS=\"$${LF0WINS} $(LF0WIN)$${i}\"; \
+						i=`expr $${i} + 1`; \
+					done; \
+					$(PERL) scripts/interpolate.pl $${LF0DIM} lf0/$${base}.lf0 > $${base}.lf0.ip; \
+					$(PERL) scripts/window.pl $${LF0DIM} $${base}.lf0.ip $${LF0WINS} > $${base}.lf0; \
+					$(MERGE) +f -s 0 -l $${LF0MSDDIM} -L $${MGCWINDIM}       $${base}.mgc         < $${base}.lf0.msd > $${base}.mgc+lf0.msd; \
+					$(MERGE) +f -s 0 -l $${LF0WINDIM} -L $${MGCWINLF0MSDDIM} $${base}.mgc+lf0.msd < $${base}.lf0     > ffo/$${base}.ffo; \
+					rm -f $${base}.mgc $${base}.lf0.msd $${base}.lf0 $${base}.lf0.ip $${base}.mgc+lf0.msd; \
+				fi; \
+			else \
+				MGCDIM=`expr $(MGCORDER) + 1`; \
+				LF0DIM=`expr $(LF0ORDER) + 1`; \
+				BAPDIM=`expr $(BAPORDER) + 1`; \
+				VIBDIM=`expr $(VIBORDER) + 1`; \
+				MGCWINDIM=`expr $(NMGCWIN) \* $${MGCDIM}`; \
+				LF0MSDDIM=1; \
+				LF0WINDIM=`expr $(NLF0WIN) \* $${LF0DIM}`; \
+				BAPWINDIM=`expr $(NBAPWIN) \* $${BAPDIM}`; \
+				VIBWINDIM=`expr $(NVIBWIN) \* $${VIBDIM}`; \
+				MGCWINLF0MSDDIM=`expr $${MGCWINDIM} + $${LF0MSDDIM}`; \
+				MGCWINLF0MSDLF0WINDIM=`expr $${MGCWINLF0MSDDIM} + $${LF0WINDIM}`; \
+				MGCWINLF0MSDLF0WINBAPWINDIM=`expr $${MGCWINLF0MSDLF0WINDIM} + $${BAPWINDIM}`; \
+				if [ -s mgc/$${base}.mgc -a -s lf0/$${base}.lf0 -a -s bap/$${base}.bap -a -s vib/$${base}.vib ]; then \
+					MGCWINS=""; \
+					i=1; \
+					while [ $${i} -le $(NMGCWIN) ]; do \
+						eval MGCWINS=\"$${MGCWINS} $(MGCWIN)$${i}\"; \
+						i=`expr $${i} + 1`; \
+					done; \
+					$(PERL) scripts/window.pl $${MGCDIM} mgc/$${base}.mgc $${MGCWINS} > $${base}.mgc; \
+					$(SOPR) lf0/$${base}.lf0 -magic -1.0E+10 -m 0.0 -a 1.0 -MAGIC 0.0 > $${base}.lf0.msd; \
+					LF0WINS=""; \
+					i=1; \
+					while [ $${i} -le $(NLF0WIN) ]; do \
+						eval LF0WINS=\"$${LF0WINS} $(LF0WIN)$${i}\"; \
+						i=`expr $${i} + 1`; \
+					done; \
+					$(PERL) scripts/interpolate.pl $${LF0DIM} lf0/$${base}.lf0 > $${base}.lf0.ip; \
+					$(PERL) scripts/window.pl $${LF0DIM} $${base}.lf0.ip $${LF0WINS} > $${base}.lf0; \
+					BAPWINS=""; \
+					i=1; \
+					while [ $${i} -le $(NBAPWIN) ]; do \
+						eval BAPWINS=\"$${BAPWINS} $(BAPWIN)$${i}\"; \
+						i=`expr $${i} + 1`; \
+					done; \
+					$(PERL) scripts/window.pl $${BAPDIM} bap/$${base}.bap $${BAPWINS} > $${base}.bap; \
+					VIBWINS=""; \
+					i=1; \
+					while [ $${i} -le $(NVIBWIN) ]; do \
+						eval VIBWINS=\"$${VIBWINS} $(VIBWIN)$${i}\"; \
+						i=`expr $${i} + 1`; \
+					done; \
+					$(PERL) scripts/window.pl $${VIBDIM} vib/$${base}.vib $${VIBWINS} > $${base}.vib; \
+					$(MERGE) +f -s 0 -l $${LF0MSDDIM} -L $${MGCWINDIM}                   $${base}.mgc                 < $${base}.lf0.msd > $${base}.mgc+lf0.msd; \
+					$(MERGE) +f -s 0 -l $${LF0WINDIM} -L $${MGCWINLF0MSDDIM}             $${base}.mgc+lf0.msd         < $${base}.lf0     > $${base}.mgc+lf0.msd+lf0; \
+					$(MERGE) +f -s 0 -l $${BAPWINDIM} -L $${MGCWINLF0MSDLF0WINDIM}       $${base}.mgc+lf0.msd+lf0     < $${base}.bap     > $${base}.mgc+lf0.msd+lf0+bap; \
+					$(MERGE) +f -s 0 -l $${VIBWINDIM} -L $${MGCWINLF0MSDLF0WINBAPWINDIM} $${base}.mgc+lf0.msd+lf0+bap < $${base}.vib     > ffo/$${base}.ffo; \
+					rm -f $${base}.mgc $${base}.lf0.msd $${base}.lf0 $${base}.lf0.ip $${base}.bap $${base}.mgc+lf0.msd $${base}.mgc+lf0.msd+lf0 $${base}.mgc+lf0.msd+lf0+bap; \
+				fi; \
+			fi; \
+		done; \
+	fi
+
+stats:
+	# Calculating statistics for MLPG
+	if [ $(USESTRAIGHT) -eq 0 -a $(USEWORLD) -eq 0 ]; then \
+		mkdir -p stats; \
+		if [ $(USESTRAIGHT) -eq 0 ]; then \
+			MGCDIM=`expr $(MGCORDER) + 1`; \
+			LF0DIM=1; \
+			MGCWINDIM=`expr $(NMGCWIN) \* $${MGCDIM}`; \
+			LF0MSDDIM=1; \
+			LF0WINDIM=`expr $(NLF0WIN) \* $${LF0DIM}`; \
+			MGCWINLF0MSDDIM=`expr $${MGCWINDIM} + $${LF0MSDDIM}`; \
+			FFODIM=`expr $${MGCWINLF0MSDDIM} + $${LF0WINDIM}`; \
+			cat ffo/$(DATASET)_$(SPEAKER)_*.ffo | $(VSTAT) -l $${FFODIM} -d -o 2 > stats/ffo.var; \
+			$(BCUT) +f -s 0                   -e `expr $${MGCWINDIM} - 1` -l 1 stats/ffo.var > stats/mgc.var; \
+			$(BCUT) +f -s $${MGCWINLF0MSDDIM}                             -l 1 stats/ffo.var > stats/lf0.var; \
+		else \
+			MGCDIM=`expr $(MGCORDER) + 1`; \
+			LF0DIM=1; \
+			BAPDIM=`expr $(BAPORDER) + 1`; \
+			MGCWINDIM=`expr $(NMGCWIN) \* $${MGCDIM}`; \
+			LF0MSDDIM=1; \
+			LF0WINDIM=`expr $(NLF0WIN) \* $${LF0DIM}`; \
+			BAPWINDIM=`expr $(NBAPWIN) \* $${BAPDIM}`; \
+			MGCWINLF0MSDDIM=`expr $${MGCWINDIM} + $${LF0MSDDIM}`; \
+			MGCWINLF0MSDLF0WINDIM=`expr $${MGCWINLF0MSDDIM} + $${LF0WINDIM}`; \
+			FFODIM=`expr $${MGCWINLF0MSDLF0WINDIM} + $${BAPWINDIM}`; \
+			cat ffo/$(DATASET)_$(SPEAKER)_*.ffo | $(VSTAT) -l $${FFODIM} -d -o 2 > stats/ffo.var; \
+			$(BCUT) +f -s 0                         -e `expr $${MGCWINDIM} - 1`             -l 1 stats/ffo.var > stats/mgc.var; \
+			$(BCUT) +f -s $${MGCWINLF0MSDDIM}       -e `expr $${MGCWINLF0MSDLF0WINDIM} - 1` -l 1 stats/ffo.var > stats/lf0.var; \
+			$(BCUT) +f -s $${MGCWINLF0MSDLF0WINDIM}                                         -l 1 stats/ffo.var > stats/bap.var; \
+		fi; \
+		rm -f tmp.var1 tmp.var2; \
+		for ffo in ffo/$(DATASET)_$(SPEAKER)_*.ffo; do \
+			$(VSTAT) -l $${FFODIM} -d -o 2 $${ffo} >> tmp.var1; \
+		done; \
+		$(VSTAT) -l $${FFODIM} -d -o 2 tmp.var1 > tmp.var2; \
+		if [ $(USESTRAIGHT) -eq 0 ]; then \
+			$(BCUT) -s 0                   -e `expr $${MGCDIM} - 1`                       tmp.var2 >  stats/gv.var; \
+			$(BCUT) -s $${MGCWINLF0MSDDIM} -e `expr $${MGCWINLF0MSDDIM} + $${LF0DIM} - 1` tmp.var2 >> stats/gv.var; \
+		else \
+			$(BCUT) -s 0                         -e `expr $${MGCDIM} - 1`                             tmp.var2 >  stats/gv.var; \
+			$(BCUT) -s $${MGCWINLF0MSDDIM}       -e `expr $${MGCWINLF0MSDDIM} + $${LF0DIM} - 1`       tmp.var2 >> stats/gv.var; \
+			$(BCUT) -s $${MGCWINLF0MSDLF0WINDIM} -e `expr $${MGCWINLF0MSDLF0WINDIM} + $${BAPDIM} - 1` tmp.var2 >> stats/gv.var; \
+		fi; \
+		rm -f tmp.var1 tmp.var2; \
+	fi
+
+lab:
+	# Extracting monophone and fullcontext labels
+	mkdir -p labels/mono
+	mkdir -p labels/full
+	if [ $(USEUTT) -eq 1 ]; then \
+		for utt in utts/$(DATASET)_$(SPEAKER)_*.utt; do \
+			base=`basename $${utt} .utt`; \
+			if [ -s $${utt} ]; then \
+				echo "Extracting labels from $${utt}"; \
+				$(DUMPFEATS) -eval scripts/extra_feats.scm -relation Segment -feats scripts/label.feats -output $${base}.feats $${utt}; \
+			fi; \
+			if [ -s $${base}.feats ]; then \
+				$(AWK) -f scripts/label-full.awk $${base}.feats > labels/full/$${base}.lab; \
+				$(AWK) -f scripts/label-mono.awk $${base}.feats > labels/mono/$${base}.lab; \
+				rm -f $${base}.feats; \
+			fi; \
+		done; \
+	else \
+		for txt in txt/$(DATASET)_$(SPEAKER)_*.txt; do \
+			base=`basename $${txt} .txt`; \
+			if [ -s $${txt} ]; then \
+				echo "Extracting labels from $${txt}"; \
+				$(PERL) scripts/normtext.pl $${txt} > $${base}.txt; \
+				$(TEXT2UTT) $${base}.txt > $${base}.utt; \
+				$(DUMPFEATS) -eval scripts/extra_feats.scm -relation Segment -feats scripts/label.feats -output $${base}.feats $${base}.utt; \
+				rm -f $${base}.txt $${base}.utt; \
+			fi; \
+			if [ -s $${base}.feats ]; then \
+				$(AWK) -f scripts/label-full.awk $${base}.feats > labels/full/$${base}.lab; \
+				$(AWK) -f scripts/label-mono.awk $${base}.feats > labels/mono/$${base}.lab; \
+				rm -f $${base}.feats; \
+			fi; \
+		done; \
+	fi
 
 mlf:
 	# Generating monophone and fullcontext Master Label Files (MLF)
@@ -327,21 +537,26 @@ scp:
 	# Generating a trainig data script
 	mkdir -p scp
 
-	rm -f scp/train.scp
+	rm -f scp/train.cmp.scp
 	for cmp in @PWD@/data/cmp/$(DATASET)_$(SPEAKER)_*.cmp; do \
 		if [ -s $${cmp} -a -s labels/mono/`basename $${cmp} .cmp`.lab -a -s labels/full/`basename $${cmp} .cmp`.lab ]; then \
-			echo $${cmp} >> scp/train.scp; \
+			echo $${cmp} >> scp/train.cmp.scp; \
 		fi \
 	done
 
 	# Generating a generation label script
-	rm -f scp/gen.scp
+	rm -f scp/gen.lab.scp
 	for lab in @PWD@/data/labels/gen/*.lab; do \
-		echo $${lab} >> scp/gen.scp; \
+		echo $${lab} >> scp/gen.lab.scp; \
 	done
 
+question:
+	# Generating a question file
+	mkdir -p questions
+	$(PERL) scripts/makequestion.pl configs/$(QNAME).conf > questions/questions_$(QNAME).hed
+	grep -e 'Num.*Utterance' questions/questions_$(QNAME).hed > questions/questions_utt_$(QNAME).hed
 
-clean: clean-mgc clean-lf0 clean-bap clean-cmp clean-mlf clean-list clean-scp
+clean: clean-mgc clean-lf0 clean-bap clean-cmp clean-ffo clean-stats clean-lab clean-mlf clean-list clean-scp clean-question
 
 clean-mgc:
 	rm -rf mgc
@@ -355,6 +570,16 @@ clean-bap:
 clean-cmp:
 	rm -rf cmp
 
+clean-ffo:
+	rm -rf ffo
+
+clean-stats:
+	rm -rf stats
+
+clean-lab:
+	rm -rf labels/mono
+	rm -rf labels/full
+
 clean-mlf:
 	rm -f labels/*.mlf
 
@@ -364,7 +589,10 @@ clean-list:
 clean-scp:
 	rm -rf scp
 
+clean-question:
+	rm -rf questions
+
 distclean: clean
 	rm -f Makefile
 
-.PHONY: all analysis features cmp labels mlf list scp clean distclean
+.PHONY: all analysis features cmp ffo stats labels lab mlf list scp question clean distclean
