@@ -1,6 +1,6 @@
 # Process this file with autoconf to produce a configure script.
-AC_INIT(HTS-demo_NIT-SONG070-F001, 2.3, hts-users@sp.nitech.ac.jp)
-AC_COPYRIGHT(Copyright 2001-2015 Nagoya Institute of Technology)
+AC_INIT(HTS-demo_NITECH_jp_song070, 2.3.2, hts-users@sp.nitech.ac.jp)
+AC_COPYRIGHT(Copyright 2001-2017 Nagoya Institute of Technology)
 AC_COPYRIGHT(Copyright 2001-2008 Tokyo Institute of Technology)
 
 
@@ -15,17 +15,44 @@ if test ! -f "$PERL"; then
 	AC_MSG_ERROR(Can't find perl)
 fi
 
-# php
-#AC_PATH_PROG([PHP], [php], [/usr/bin], [$PATH:/usr/bin])
-#if test ! -f "$PHP"; then
-#	AC_MSG_ERROR(Can't find php)
-#fi
+# python
+AC_PATH_PROG([PYTHON], [python], [/usr/bin], [$PATH:/usr/bin])
+if test ! -f "$PYTHON"; then
+	if test -z "$USEDNN"; then
+		:
+	elif test $USEDNN -ne 1; then
+		:
+	else
+		AC_MSG_ERROR(Can't find python)
+	fi
+fi
+PYTHON="$PYTHON -u -B"
 
 # wc
 AC_PATH_PROG([WC], [wc], [/usr/bin], [$PATH:/usr/bin])
 if test ! -f "$WC"; then
 	AC_MSG_ERROR(Can't find wc)
 fi
+
+
+
+# festival
+# festival search path
+#AC_ARG_WITH(fest-search-path,
+#		AS_HELP_STRING([--with-fest-search-path],[specify the additional festival search path]),
+#		[fest_search_path=$withval])
+
+# text2utt
+#AC_PATH_PROG([TEXT2UTT], [text2utt], [:], [${fest_search_path}:$PATH])
+#if test ! -f "$TEXT2UTT"; then
+#	AC_MSG_ERROR(Can't find text2utt of festival)
+#fi
+
+# dumpfeats
+#AC_PATH_PROG([DUMPFEATS], [dumpfeats], [:], [${fest_search_path}:$PATH])
+#if test ! -f "$DUMPFEATS"; then
+#	AC_MSG_ERROR(Can't find dumpfeats of festival)
+#fi
 
 
 
@@ -239,6 +266,18 @@ if test ! -f "$IFFTR"; then
 	AC_MSG_ERROR(Can't find ifftr of SPTK)
 fi
 
+# mlpg
+AC_PATH_PROG([MLPG], [mlpg], [:], [${sptk_search_path}:$PATH])
+if test ! -f "$MLPG"; then
+	AC_MSG_ERROR(Can't find mlpg of SPTK)
+fi
+
+# interpolate
+AC_PATH_PROG([INTERPOLATE], [interpolate], [:], [${sptk_search_path}:$PATH])
+if test ! -f "$INTERPOLATE"; then
+	AC_MSG_ERROR(Can't find interpolate of SPTK)
+fi
+
 
 
 # MATLAB
@@ -311,8 +350,6 @@ if test ! -f "$WORLD/analysis" ; then
 fi
 AC_SUBST(WORLD)
 
-
-
 # HTS commands
 # HTS search path
 AC_ARG_WITH(hts-search-path,
@@ -382,10 +419,6 @@ if test ! -f "$ENGINE"; then
 		AC_MSG_ERROR(Can't find hts_engine)
 	elif test $USESTRAIGHT -ne 1; then
 		AC_MSG_ERROR(Can't find hts_engine)
-	elif test -z "$USEWORLD"; then
-		AC_MSG_ERROR(Can't find hts_engine)
-	elif test $USEWORLD -ne 1; then
-		AC_MSG_ERROR(Can't find hts_engine)
 	else
 		:
 	fi
@@ -429,18 +462,18 @@ AC_SUBST(SPEAKER)
 
 # version number and question set name
 AC_ARG_VAR([VER],[version number of this setting (default=1)])
-AC_ARG_VAR([QNUM],[question set number (default='001')])
+AC_ARG_VAR([QNAME],[question set name (default=en_US.talk)])
 
 if test -z "$VER"; then
 	VER=1
 fi
 
-if test -z "$QNUM"; then
-	QNUM='001'
+if test -z "$QNAME"; then
+	QNAME=001
 fi
 
 AC_SUBST(VER)
-AC_SUBST(QNUM)
+AC_SUBST(QNAME)
 
 
 
@@ -451,26 +484,31 @@ AC_SUBST(PWD)
 
 # setting of mel-generalized cepstral analysis, F0 extraction, and postfiltering related settings
 # parse command-line arguments
+AC_ARG_VAR([USEUTT],[generate labels from utt files instead of text files (0:off or 1:on, default=0)])
 AC_ARG_VAR([USESTRAIGHT],[turn on STRAIGHT-based analysis (0:off or 1:on, default=0)])
 AC_ARG_VAR([USEWORLD],[turn on WORLD-based analysis (0:off or 1:on, default=0)])
 AC_ARG_VAR([FRAMELEN],[frame length in point (default=1200)])
 AC_ARG_VAR([FRAMESHIFT],[frame shift in point (default=240)])
 AC_ARG_VAR([WINDOWTYPE],[window type -> 0: Blackman  1: Hamming  2: Hanning (default=1)])
 AC_ARG_VAR([NORMALIZE],[normalization -> 0: none  1: by power  2: by magnitude (default=1)])
-AC_ARG_VAR([FFTLEN],[FFT length in point (default=2048)])
 AC_ARG_VAR([SAMPFREQ],[sampling frequency in Hz (default=48000)])
-AC_ARG_VAR([FREQWARP],[frequency warping factor (default=0.77)])
+AC_ARG_VAR([FFTLEN],[FFT length in point (default=2048)])
+AC_ARG_VAR([FREQWARP],[frequency warping factor (default=0.55)])
 AC_ARG_VAR([GAMMA],[pole/zero weight factor (0: mel-cepstral analysis  1: LPC analysis  2,3,...,N: mel-generalized cepstral (MGC) analysis) (default=0)])
-AC_ARG_VAR([MGCORDER],[order of MGC analysis (default=59 for cepstral form, default=12 for LSP form)])
-AC_ARG_VAR([BAPORDER],[order of BAP analysis (default=23)])
+AC_ARG_VAR([MGCORDER],[order of MGC analysis (default=49 for cepstral form, default=12 for LSP form)])
+AC_ARG_VAR([BAPORDER],[order of BAP analysis (default=24)])
 AC_ARG_VAR([LNGAIN],[use logarithmic gain instead of linear gain (default=1)])
-AC_ARG_VAR([LOWERF0],[lower limit for F0 extraction in Hz (default=195)])
-AC_ARG_VAR([UPPERF0],[upper limit for F0 extraction in Hz (default=740)])
+AC_ARG_VAR([LOWERF0],[lower limit for F0 extraction in Hz (default=110)])
+AC_ARG_VAR([UPPERF0],[upper limit for F0 extraction in Hz (default=280)])
 AC_ARG_VAR([PSTFILTER_MCP],[postfiltering factor for mel-cepstral (default=1.4)])
 AC_ARG_VAR([PSTFILTER_LSP],[postfiltering factor for LSP (default=0.7)])
 AC_ARG_VAR([IMPLEN],[length of impulse response (default=4096 for cepstral form, default=576 for LSP form)])
 
 # default values
+if test -z "$USEUTT"; then
+	USEUTT=0
+fi
+
 if test -z "$USESTRAIGHT"; then
 	USESTRAIGHT=0
 fi
@@ -495,12 +533,24 @@ if test -z "$NORMALIZE"; then
 	NORMALIZE=1
 fi
 
-if test -z "$FFTLEN"; then
-	FFTLEN=2048
-fi
-
 if test -z "$SAMPFREQ"; then
 	SAMPFREQ=48000
+fi
+
+if test "$USESTRAIGHT" -eq 1 -o "$USEWORLD" -eq 1; then
+	if test $SAMPFREQ -le 25600; then
+		FFTLEN=1024
+	elif test $SAMPFREQ -le 51200; then
+		FFTLEN=2048
+	elif test $SAMPFREQ -le 102400; then
+		FFTLEN=4096
+	else
+		FFTLEN=8192
+	fi
+else
+	if test -z "$FFTLEN"; then
+		FFTLEN=2048
+	fi
 fi
 
 if test -z "$FREQWARP"; then
@@ -509,10 +559,11 @@ if test -z "$FREQWARP"; then
 		10000) FREQWARP=0.35 ;;
 		12000) FREQWARP=0.37 ;;
 		16000) FREQWARP=0.42 ;;
+		20000) FREQWARP=0.44 ;;
 		22050) FREQWARP=0.45 ;;
-		32000) FREQWARP=0.45 ;;
+		32000) FREQWARP=0.50 ;;
 		44100) FREQWARP=0.53 ;;
-		48000) FREQWARP=0.77 ;;
+		48000) FREQWARP=0.55 ;;
 		*)     FREQWARP=0.00 ;;
 	esac
 fi
@@ -523,14 +574,14 @@ fi
 
 if test -z "$MGCORDER"; then
 	if test $GAMMA -eq 0; then
-		MGCORDER=59
+		MGCORDER=49
 	else
 		MGCORDER=12
 	fi
 fi
 
 if test -z "$BAPORDER"; then
-	BAPORDER=23
+	BAPORDER=24
 fi
 
 if test -z "$LNGAIN"; then
@@ -538,12 +589,12 @@ if test -z "$LNGAIN"; then
 fi
 
 if test -z "$LOWERF0"; then
-	LOWERF0=195
-fi 
+	LOWERF0=110
+fi
 
 if test -z "$UPPERF0"; then
-	UPPERF0=740
-fi 
+	UPPERF0=280
+fi
 
 if test -z "$PSTFILTER_MCP"; then
 	PSTFILTER_MCP=1.4
@@ -571,14 +622,14 @@ fi
 
 
 # substitute variables
+AC_SUBST(USEUTT)
 AC_SUBST(USESTRAIGHT)
-AC_SUBST(USEWORLD)
 AC_SUBST(FRAMELEN)
 AC_SUBST(FRAMESHIFT)
 AC_SUBST(WINDOWTYPE)
 AC_SUBST(NORMALIZE)
-AC_SUBST(FFTLEN)
 AC_SUBST(SAMPFREQ)
+AC_SUBST(FFTLEN)
 AC_SUBST(FREQWARP)
 AC_SUBST(GAMMA)
 AC_SUBST(MGCORDER)
@@ -598,6 +649,7 @@ AC_SUBST(BAPVSIZE)
 AC_ARG_VAR([NMGCWIN],[number of delta windows for MGC coefficients (default=3)])
 AC_ARG_VAR([NLF0WIN],[number of delta windows for log F0 values (default=3)])
 AC_ARG_VAR([NBAPWIN],[number of delta windows for band aperiodicity values (default=3)])
+AC_ARG_VAR([NVIBWIN],[number of delta windows for vibrate values (default=3)])
 
 # default values
 if test -z "$NMGCWIN"; then
@@ -612,23 +664,32 @@ if test -z "$NBAPWIN"; then
 	NBAPWIN=3
 fi
 
+if test -z "$NVIBWIN"; then
+	NVIBWIN=3
+fi
+
 MGCSTRST=1
 MGCSTREN=1
 LF0STRST=`expr $MGCSTREN + 1`
 LF0STREN=`expr $MGCSTREN + $NLF0WIN`
 BAPSTRST=`expr $LF0STREN + 1`
 BAPSTREN=`expr $LF0STREN + 1`
+VIBSTRST=`expr $BAPSTREN + 1`
+VIBSTREN=`expr $BAPSTREN + $NVIBWIN`
 
 # substitute variables
 AC_SUBST(NMGCWIN)
 AC_SUBST(NLF0WIN)
 AC_SUBST(NBAPWIN)
+AC_SUBST(NVIBWIN)
 AC_SUBST(MGCSTRST)
 AC_SUBST(MGCSTREN)
 AC_SUBST(LF0STRST)
 AC_SUBST(LF0STREN)
 AC_SUBST(BAPSTRST)
 AC_SUBST(BAPSTREN)
+AC_SUBST(VIBSTRST)
+AC_SUBST(VIBSTREN)
 
 
 
@@ -645,9 +706,11 @@ AC_ARG_VAR([MINDUR],[minimum duration to be evaluated (default=5)])
 AC_ARG_VAR([NMGCTRANSBLK],[number of blocks for MGC transforms (default=3)])
 AC_ARG_VAR([NLF0TRANSBLK],[number of blocks for log F0 transforms (default=1)])
 AC_ARG_VAR([NBAPTRANSBLK],[number of blocks for band aperiodicity transforms (default=3)])
+AC_ARG_VAR([NVIBTRANSBLK],[number of blocks for vibrate transforms (default=1)])
 AC_ARG_VAR([MGCBANDWIDTH],[band width for MGC transforms (default=35 for cepstral form, derault=2 for LSP form)])
-AC_ARG_VAR([LF0BANDWIDTH],[band width for log F0 transforms (default=1)])
+AC_ARG_VAR([LF0BANDWIDTH],[band width for log F0 transforms (default=2)])
 AC_ARG_VAR([BAPBANDWIDTH],[band width for band aperiodicity transforms (default=25)])
+AC_ARG_VAR([VIBBANDWIDTH],[band width for vibrate transforms (default=2)])
 
 # default values
 if test -z "$NSTATE"; then
@@ -694,6 +757,10 @@ if test -z "$NBAPTRANSBLK"; then
 	NBAPTRANSBLK=3
 fi
 
+if test -z "$NVIBTRANSBLK"; then
+	NVIBTRANSBLK=1
+fi
+
 if test -z "$MGCBANDWIDTH"; then
 	if test $GAMMA -eq 0; then
 		MGCBANDWIDTH=$MGCVSIZE
@@ -703,11 +770,15 @@ if test -z "$MGCBANDWIDTH"; then
 fi
 
 if test -z "$LF0BANDWIDTH"; then
-	LF0BANDWIDTH=1
+	LF0BANDWIDTH=2
 fi
 
 if test -z "$BAPBANDWIDTH"; then
 	BAPBANDWIDTH=$BAPVSIZE
+fi
+
+if test -z "$VIBBANDWIDTH"; then
+	VIBBANDWIDTH=2
 fi
 
 # substitute variables
@@ -722,9 +793,11 @@ AC_SUBST(MINDUR)
 AC_SUBST(NMGCTRANSBLK)
 AC_SUBST(NLF0TRANSBLK)
 AC_SUBST(NBAPTRANSBLK)
+AC_SUBST(NVIBTRANSBLK)
 AC_SUBST(MGCBANDWIDTH)
 AC_SUBST(LF0BANDWIDTH)
 AC_SUBST(BAPBANDWIDTH)
+AC_SUBST(VIBBANDWIDTH)
 
 
 # parameter generation algorithm settings
@@ -732,7 +805,7 @@ AC_SUBST(BAPBANDWIDTH)
 AC_ARG_VAR([PGTYPE],[type of speech parameter generation algorithm (0: Cholesky, 1: MixHidden, 2: StateHidden, default=0)])
 AC_ARG_VAR([MAXEMITER],[max EM iteration (default=20)])
 AC_ARG_VAR([EMEPSILON],[convergence factor for EM iteration (default=0.0001)])
-AC_ARG_VAR([USEGV],[turn on GV-based parameter generation algorithm (0:off or 1:on, default=1)])
+AC_ARG_VAR([USEHMMGV],[turn on GV-based parameter generation algorithm (0:off or 1:on, default=1)])
 AC_ARG_VAR([MAXGVITER],[maximum number of iterations of GV-based parameter generation algorithm (default=50)])
 AC_ARG_VAR([GVEPSILON],[convergence factor for GV iteration (default=0.0001)])
 AC_ARG_VAR([MINEUCNORM],[minimum Euclid norm for GV iteration (default=0.01)])
@@ -744,7 +817,7 @@ AC_ARG_VAR([GVWEIGHT],[weight for GV output prob. (default=1.0)])
 AC_ARG_VAR([OPTKIND],[optimization method (STEEPEST, NEWTON, or LBFGS) (default=NEWTON)])
 AC_ARG_VAR([NOSILGV],[turn on GV without silent and pause phoneme (0:off or 1:on, default=1)])
 AC_ARG_VAR([CDGV],[turn on context-dependent GV (0:off or 1:on, default=1)])
-AC_ARG_VAR([USEMSPF],[turn on modulation spectrum-based postfilter (0:off or 1:on, default=1)])
+AC_ARG_VAR([USEMSPF],[turn on modulation spectrum-based postfilter (0:off or 1:on, default=0)])
 
 # default values
 if test -z "$PGTYPE"; then
@@ -759,8 +832,8 @@ if test -z "$EMEPSILON"; then
 	EMEPSILON=0.0001
 fi
 
-if test -z "$USEGV"; then
-	USEGV=1
+if test -z "$USEHMMGV"; then
+	USEHMMGV=1
 fi
 
 if test -z "$MAXGVITER"; then
@@ -808,14 +881,14 @@ if test -z "$CDGV"; then
 fi
 
 if test -z "$USEMSPF"; then
-	USEMSPF=1
+	USEMSPF=0
 fi
 
 # substitute variables
 AC_SUBST(PGTYPE)
 AC_SUBST(MAXEMITER)
 AC_SUBST(EMEPSILON)
-AC_SUBST(USEGV)
+AC_SUBST(USEHMMGV)
 AC_SUBST(MAXGVITER)
 AC_SUBST(GVEPSILON)
 AC_SUBST(MINEUCNORM)
@@ -830,6 +903,100 @@ AC_SUBST(CDGV)
 AC_SUBST(USEMSPF)
 
 
+# neural network training settings
+# parse command-line arguments
+AC_ARG_VAR([USEDNN],[use deep neural network as acoustic model (0:off or 1:on, default=0)])
+AC_ARG_VAR([NHIDDENUNITS],[number of hidden units in each layer (1st 2nd 3rd ...) (default='2048 2048 2048')])
+AC_ARG_VAR([ACTIVATION],[activation function for hidden units -> 0: Linear  1: Sigmoid  2: Tanh  3: ReLU (default=1)])
+AC_ARG_VAR([OPTIMIZER],[optimizer -> 0: SGD  1: Momentum  2: AdaGrad  3: AdaDelta  4: Adam  5: RMSprop (default=4)])
+AC_ARG_VAR([LEARNRATE],[learning rate (default=0.001)])
+AC_ARG_VAR([TRJLEARNRATE],[learning rate for trajectory training (default=0.0001)])
+AC_ARG_VAR([DNNGVWEIGHT],[weight for GV (default=0.1)])
+AC_ARG_VAR([KEEPPROB],[probability for not randomly setting activities to zero (default=0.5)])
+AC_ARG_VAR([QUEUESIZE],[queue size (default=10000)])
+AC_ARG_VAR([BATCHSIZE],[mini-batch size (default=256)])
+AC_ARG_VAR([NEPOCH],[number of epochs (default=100)])
+AC_ARG_VAR([NTRJEPOCH],[number of epochs for trajectory training (default=50)])
+AC_ARG_VAR([NTHREAD],[number of threads (0:unlimited, default=0)])
+AC_ARG_VAR([RANDOMSEED],[random seed for initialization (default=12345)])
 
-# output data/Makefile and scripts/Config.pm
-AC_OUTPUT(data/Makefile scripts/Config.pm Makefile)
+# default values
+if test -z "$USEDNN"; then
+	USEDNN=0
+elif test $USEDNN -eq 1; then
+	if test `$PYTHON -c 'import tensorflow as tf; print(tf.__version__)' 2>&1 >/dev/null | grep -c Error` -gt 0; then
+		AC_MSG_ERROR(Can't find TensorFlow)
+	fi
+fi
+
+if test -z "$NHIDDENUNITS"; then
+	NHIDDENUNITS='2048 2048 2048'
+fi
+
+if test -z "$ACTIVATION"; then
+	ACTIVATION=1
+fi
+
+if test -z "$OPTIMIZER"; then
+	OPTIMIZER=4
+fi
+
+if test -z "$LEARNRATE"; then
+	LEARNRATE=0.001
+fi
+
+if test -z "$TRJLEARNRATE"; then
+	TRJLEARNRATE=0.0001
+fi
+
+if test -z "$DNNGVWEIGHT"; then
+	DNNGVWEIGHT=0.1
+fi
+
+if test -z "$KEEPPROB"; then
+	KEEPPROB=0.5
+fi
+
+if test -z "$QUEUESIZE"; then
+	QUEUESIZE=10000
+fi
+
+if test -z "$BATCHSIZE"; then
+	BATCHSIZE=256
+fi
+
+if test -z "$NEPOCH"; then
+	NEPOCH=100
+fi
+
+if test -z "$NTRJEPOCH"; then
+	NTRJEPOCH=50
+fi
+
+if test -z "$NTHREAD"; then
+	NTHREAD=0
+fi
+
+if test -z "$RANDOMSEED"; then
+	RANDOMSEED=12345
+fi
+
+# substitute variables
+AC_SUBST(USEDNN)
+AC_SUBST(NHIDDENUNITS)
+AC_SUBST(ACTIVATION)
+AC_SUBST(OPTIMIZER)
+AC_SUBST(LEARNRATE)
+AC_SUBST(TRJLEARNRATE)
+AC_SUBST(DNNGVWEIGHT)
+AC_SUBST(KEEPPROB)
+AC_SUBST(QUEUESIZE)
+AC_SUBST(BATCHSIZE)
+AC_SUBST(NEPOCH)
+AC_SUBST(NTRJEPOCH)
+AC_SUBST(NTHREAD)
+AC_SUBST(RANDOMSEED)
+
+
+# output Makefiles and config file
+AC_OUTPUT(data/Makefile Makefile scripts/Config.pm)
