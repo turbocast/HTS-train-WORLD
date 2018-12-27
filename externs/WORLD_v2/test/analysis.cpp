@@ -185,24 +185,15 @@ void AperiodicityEstimation(double *x, int x_length,
     WorldParameters *world_parameters) {
   D4COption option = {0};
   InitializeD4COption(&option);
-
-  //int number_of_aperiodicities =
-  //  static_cast<int>(MyMinDouble(world::kUpperLimit, world_parameters->fs / 2.0 -
-  //    world::kFrequencyInterval) / world::kFrequencyInterval);
-
-  // Parameters setting and memory allocation.
+  option.threshold = 0;
+  
   world_parameters->aperiodicity = new double *[world_parameters->f0_length];
   for (int i = 0; i < world_parameters->f0_length; ++i) {
       world_parameters->aperiodicity[i] = 
         new double[world_parameters->fft_size / 2 + 1];
-    //world_parameters->aperiodicity[i] = new double[number_of_aperiodicities];
   }
 
-  //world_parameters->number_of_aperiodicities = number_of_aperiodicities;
-
   DWORD elapsed_time = timeGetTime();
-  // option is not implemented in this version. This is for future update.
-  // We can use "NULL" as the argument.
   D4C(x, x_length, world_parameters->fs, world_parameters->time_axis,
       world_parameters->f0, world_parameters->f0_length,
       world_parameters->fft_size, &option, world_parameters->aperiodicity);
