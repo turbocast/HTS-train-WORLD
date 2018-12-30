@@ -52,7 +52,7 @@ $spkr        = '@SPEAKER@';
 $qname       = '@QNAME@';
 $ver         = '@VER@';
 $usestraight = '@USESTRAIGHT@';
-$useworld = '@USEWORLD@';
+$useworld    = '@USEWORLD@';
 
 @SET        = ('cmp', 'dur');
 if ( !$usestraight && !$useworld ) {
@@ -117,7 +117,7 @@ $ref{'dur'} = \@dur;
 %msdi = ('mgc' => '0',              # msd information
          'lf0' => '1',
          'bap' => '0',
-         'vib' => '0',
+         'vib' => '1',
          'dur' => '0');
 
 %strw = ('mgc' => '1.0',            # stream weights
@@ -163,7 +163,7 @@ $ref{'dur'} = \@dur;
 %gvgam  = ('mgc' => '000',          # stats load threshold for GV
            'lf0' => '000',
            'bap' => '000',
-           'bap' => '000');
+           'vib' => '000');
 
 %mspfe  = ('mgc' => '1.0');         # emphasis coefficient of modulation spectrum-based postfilter
 

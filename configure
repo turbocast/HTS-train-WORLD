@@ -1554,7 +1554,7 @@ Some influential environment variables:
   MAXEMITER   max EM iteration (default=20)
   EMEPSILON   convergence factor for EM iteration (default=0.0001)
   USEHMMGV    turn on GV-based parameter generation algorithm (0:off or 1:on,
-              default=1)
+              default=0)
   MAXGVITER   maximum number of iterations of GV-based parameter generation
               algorithm (default=50)
   GVEPSILON   convergence factor for GV iteration (default=0.0001)
@@ -2126,8 +2126,8 @@ if test ! -f "$PERL"; then
 fi
 
 # python
-# Extract the first word of "python", so it can be a program name with args.
-set dummy python; ac_word=$2
+# Extract the first word of "python3", so it can be a program name with args.
+set dummy python3; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 $as_echo_n "checking for $ac_word... " >&6; }
 if ${ac_cv_path_PYTHON+:} false; then :
@@ -4970,7 +4970,7 @@ if test -z "$EMEPSILON"; then
 fi
 
 if test -z "$USEHMMGV"; then
-	USEHMMGV=1
+	USEHMMGV=0
 fi
 
 if test -z "$MAXGVITER"; then
@@ -6295,3 +6295,4 @@ if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: unrecognized options: $ac_unrecognized_opts" >&5
 $as_echo "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
+

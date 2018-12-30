@@ -2383,10 +2383,9 @@ sub make_htsvoice($$) {
    }
    foreach $type (@cmp) {
       $tmp = get_stream_name($type);
-      if ($useGV) {
+      if ($useHmmGV) {
          print HTSVOICE "USE_GV[${tmp}]:1\n";
-      }
-      else {
+      } else {
          print HTSVOICE "USE_GV[${tmp}]:0\n";
       }
    }
@@ -2397,8 +2396,8 @@ sub make_htsvoice($$) {
    }
    foreach $type (@cmp) {
       $tmp = get_stream_name($type);
-      if ( $tmp eq "MGC" ) {
-         print HTSVOICE "OPTION[${tmp}]:ALPHA=$fw\n";
+      if ( $tmp eq "MGC" || $tmp eq "MCP" ) {
+         print HTSVOICE "OPTION[${tmp}]:ALPHA=$fw,GAMMA=$gm,LN_GAIN=$lg\n";
       }
       elsif ( $tmp eq "LSP" ) {
          print HTSVOICE "OPTION[${tmp}]:ALPHA=$fw,GAMMA=$gm,LN_GAIN=$lg\n";
@@ -2615,7 +2614,7 @@ sub get_stream_name($) {
 
    if ( $from eq 'mgc' ) {
       if ( $gm == 0 ) {
-         $to = "MCP";
+         $to = "MGC";
       }
       else {
          $to = "LSP";

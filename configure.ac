@@ -16,7 +16,7 @@ if test ! -f "$PERL"; then
 fi
 
 # python
-AC_PATH_PROG([PYTHON], [python], [/usr/bin], [$PATH:/usr/bin])
+AC_PATH_PROG([PYTHON], [python3], [/usr/bin], [$PATH:/usr/bin])
 if test ! -f "$PYTHON"; then
 	if test -z "$USEDNN"; then
 		:
@@ -805,7 +805,7 @@ AC_SUBST(VIBBANDWIDTH)
 AC_ARG_VAR([PGTYPE],[type of speech parameter generation algorithm (0: Cholesky, 1: MixHidden, 2: StateHidden, default=0)])
 AC_ARG_VAR([MAXEMITER],[max EM iteration (default=20)])
 AC_ARG_VAR([EMEPSILON],[convergence factor for EM iteration (default=0.0001)])
-AC_ARG_VAR([USEHMMGV],[turn on GV-based parameter generation algorithm (0:off or 1:on, default=1)])
+AC_ARG_VAR([USEHMMGV],[turn on GV-based parameter generation algorithm (0:off or 1:on, default=0)])
 AC_ARG_VAR([MAXGVITER],[maximum number of iterations of GV-based parameter generation algorithm (default=50)])
 AC_ARG_VAR([GVEPSILON],[convergence factor for GV iteration (default=0.0001)])
 AC_ARG_VAR([MINEUCNORM],[minimum Euclid norm for GV iteration (default=0.01)])
@@ -833,7 +833,7 @@ if test -z "$EMEPSILON"; then
 fi
 
 if test -z "$USEHMMGV"; then
-	USEHMMGV=1
+	USEHMMGV=0
 fi
 
 if test -z "$MAXGVITER"; then
