@@ -1,10 +1,11 @@
+#!/usr/bin/perl
 # ----------------------------------------------------------------- #
 #           The HMM-Based Speech Synthesis System (HTS)             #
 #           developed by HTS Working Group                          #
 #           http://hts.sp.nitech.ac.jp/                             #
 # ----------------------------------------------------------------- #
 #                                                                   #
-#  Copyright (c) 2001-2015  Nagoya Institute of Technology          #
+#  Copyright (c) 2001-2017  Nagoya Institute of Technology          #
 #                           Department of Computer Science          #
 #                                                                   #
 #                2001-2008  Tokyo Institute of Technology           #
@@ -42,29 +43,40 @@
 # POSSIBILITY OF SUCH DAMAGE.                                       #
 # ----------------------------------------------------------------- #
 
-all: data voice
+if ( @ARGV < 5 ) {
+   print "addhtkheader.pl sampling_rate frame_shift byte_per_frame HTK_feature_type infile\n";
+   exit(0);
+}
 
-data:
-	@ (cd data ; $(MAKE) all)
+$samprate   = $ARGV[0];
+$frameshift = $ARGV[1];
+$byte       = $ARGV[2];
+$type       = $ARGV[3];
+$infile     = $ARGV[4];
 
-voice:
-	echo "Running a training/synthesis perl script (Training.pl)"
-	@PERL@ scripts/Training.pl $(PWD)/scripts/Config.pm
+# make HTK header
+open( INPUT, "$infile" ) || die "Cannot open file: $infile";
+@STAT = stat(INPUT);
+read( INPUT, $DATA, $STAT[7] );
+$nframe = $STAT[7] / $byte;
+close(INPUT);
 
-clean: clean-data clean-voice
+# number of frames in long
+$NFRAME = pack( "l", $nframe );
 
-clean-data:
-	@ (cd data ; $(MAKE) clean)
+# frame shift in long
+$frameshift = 10000000 * $frameshift / $samprate;
+$FRAMESHIFT = pack( "l", $frameshift );
 
-clean-voice:
-	rm -rf models stats edfiles trees gv mspf voices gen proto configs
+# bytes of each frame in short
+$BYTE = pack( "s", $byte );
 
-distclean: clean
-	@ (cd data; $(MAKE) distclean)
-	rm -f scripts/Config.pm
-	rm -f Makefile
-	rm -f config.log
-	rm -f config.status
-	rm -rf autom4te.cache
+# HTK feature type in short
+$TYPE = pack( "s", $type );
 
-.PHONY: data voice clean distclean
+# output header and data
+print $NFRAME;
+print $FRAMESHIFT;
+print $BYTE;
+print $TYPE;
+print $DATA;

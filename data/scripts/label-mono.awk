@@ -4,7 +4,7 @@
 #           http://hts.sp.nitech.ac.jp/                             #
 # ----------------------------------------------------------------- #
 #                                                                   #
-#  Copyright (c) 2001-2015  Nagoya Institute of Technology          #
+#  Copyright (c) 2001-2017  Nagoya Institute of Technology          #
 #                           Department of Computer Science          #
 #                                                                   #
 #                2001-2008  Tokyo Institute of Technology           #
@@ -42,29 +42,14 @@
 # POSSIBILITY OF SUCH DAMAGE.                                       #
 # ----------------------------------------------------------------- #
 
-all: data voice
+{
+##############################
+###  SEGMENT
 
-data:
-	@ (cd data ; $(MAKE) all)
+#  boundary
+    printf "%10.0f %10.0f ", 1e7 * $65, 1e7 * $66
 
-voice:
-	echo "Running a training/synthesis perl script (Training.pl)"
-	@PERL@ scripts/Training.pl $(PWD)/scripts/Config.pm
-
-clean: clean-data clean-voice
-
-clean-data:
-	@ (cd data ; $(MAKE) clean)
-
-clean-voice:
-	rm -rf models stats edfiles trees gv mspf voices gen proto configs
-
-distclean: clean
-	@ (cd data; $(MAKE) distclean)
-	rm -f scripts/Config.pm
-	rm -f Makefile
-	rm -f config.log
-	rm -f config.status
-	rm -rf autom4te.cache
-
-.PHONY: data voice clean distclean
+#  c.name
+    printf "%s", $2
+    printf "\n"
+}

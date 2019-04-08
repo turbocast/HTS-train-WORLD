@@ -5,7 +5,7 @@
 #           http://hts.sp.nitech.ac.jp/                             #
 # ----------------------------------------------------------------- #
 #                                                                   #
-#  Copyright (c) 2001-2015  Nagoya Institute of Technology          #
+#  Copyright (c) 2001-2017  Nagoya Institute of Technology          #
 #                           Department of Computer Science          #
 #                                                                   #
 #                2001-2008  Tokyo Institute of Technology           #
@@ -49,16 +49,18 @@ $fclf        = '@FULLCONTEXT_FORMAT@';
 $fclv        = '@FULLCONTEXT_VERSION@';
 $dset        = '@DATASET@';
 $spkr        = '@SPEAKER@';
-$qnum        = '@QNUM@';
+$qname       = '@QNAME@';
 $ver         = '@VER@';
 $usestraight = '@USESTRAIGHT@';
 $useworld    = '@USEWORLD@';
 
-@SET        = ('cmp','dur');
-if($usestraight || $useworld){
-   @cmp     = ('mgc','lf0', 'bap');
-}else{
-   @cmp     = ('mgc','lf0');
+@SET        = ('cmp', 'dur');
+if ( !$usestraight && !$useworld ) {
+   @cmp     = ('mgc', 'lf0');
+} elsif($usestraight) {
+   @cmp     = ('mgc', 'lf0', 'bap');
+} elsif($useworld) {
+   @cmp     = ('mgc', 'lf0', 'bap', 'vib');
 }
 @dur        = ('dur');
 $ref{'cmp'} = \@cmp;
@@ -67,101 +69,114 @@ $ref{'dur'} = \@dur;
 %vflr = ('mgc' => '0.01',           # variance floors
          'lf0' => '0.01',
          'bap' => '0.01',
+         'vib' => '0.01',
          'dur' => '0.01');
 
 %thr  = ('mgc' => '000',            # minimum likelihood gain in clustering
          'lf0' => '000',
          'bap' => '000',
+         'vib' => '000',
          'dur' => '000');
 
 %mdlf = ('mgc' => '1.0',            # tree size control param. for MDL
          'lf0' => '1.0',
          'bap' => '1.0',
+         'vib' => '1.0',
          'dur' => '1.0');
 
 %mocc = ('mgc' => '10.0',           # minimum occupancy counts
          'lf0' => '10.0',
          'bap' => '10.0',
-         'dur' => '5.0');
+         'vib' => '10.0',
+         'dur' => ' 5.0');
 
 %gam  = ('mgc' => '000',            # stats load threshold
          'lf0' => '000',
          'bap' => '000',
+         'vib' => '000',
          'dur' => '000');
 
 %t2s  = ('mgc' => 'cmp',            # feature type to mmf conversion
          'lf0' => 'cmp',
          'bap' => 'cmp',
+         'vib' => 'cmp',
          'dur' => 'dur');
 
 %strb = ('mgc' => '@MGCSTRST@',     # stream start
          'lf0' => '@LF0STRST@',
          'bap' => '@BAPSTRST@',
+         'vib' => '@VIBSTRST@',
          'dur' => '1');
 
 %stre = ('mgc' => '@MGCSTREN@',     # stream end
          'lf0' => '@LF0STREN@',
          'bap' => '@BAPSTREN@',
+         'vib' => '@VIBSTREN@',
          'dur' => '@NSTATE@');
 
 %msdi = ('mgc' => '0',              # msd information
          'lf0' => '1',
          'bap' => '0',
+         'vib' => '1',
          'dur' => '0');
 
 %strw = ('mgc' => '1.0',            # stream weights
          'lf0' => '1.0',
-         'bap' => '1.0',
+         'bap' => '0.0',
+         'vib' => '1.0',
          'dur' => '1.0');
 
 %ordr = ('mgc' => '@MGCVSIZE@',     # feature order
-         'lf0' => '1',
+         'lf0' => '2',
          'bap' => '@BAPVSIZE@',
+         'vib' => '2',
          'dur' => '@NSTATE@');
 
 %nwin = ('mgc' => '@NMGCWIN@',      # number of windows
          'lf0' => '@NLF0WIN@',
+         'vib' => '@NVIBWIN@',
          'bap' => '@NBAPWIN@',
          'dur' => '0');
 
 %nblk = ('mgc' => '@NMGCTRANSBLK@', # number of blocks for transforms
          'lf0' => '@NLF0TRANSBLK@',
          'bap' => '@NBAPTRANSBLK@',
+         'vib' => '@NVIBTRANSBLK@',
          'dur' => '1');
 
 %band = ('mgc' => '@MGCBANDWIDTH@', # band width for transforms
          'lf0' => '@LF0BANDWIDTH@',
          'bap' => '@BAPBANDWIDTH@',
+         'vib' => '@VIBBANDWIDTH@',
          'dur' => '0');
 
 %gvthr  = ('mgc' => '000',          # minimum likelihood gain in clustering for GV
            'lf0' => '000',
-           'bap' => '000');
+           'bap' => '000',
+           'vib' => '000');
 
 %gvmdlf = ('mgc' => '1.0',          # tree size control for GV
            'lf0' => '1.0',
-           'bap' => '1.0');
+           'bap' => '1.0',
+           'vib' => '1.0');
 
 %gvgam  = ('mgc' => '000',          # stats load threshold for GV
            'lf0' => '000',
-           'bap' => '000');
+           'bap' => '000',
+           'vib' => '000');
 
-%mspfe = ('mgc' => '1.0');          # emphasis coefficient of modulation spectrum-based postfilter
+%mspfe  = ('mgc' => '1.0');         # emphasis coefficient of modulation spectrum-based postfilter
 
-@slnt = ('sil', 'pau');             # silent and pause phoneme
+@slnt   = ('pau', 'sil');           # silent and pause phoneme
 
-#%mdcp = ('dy' => 'd',              # model copy
-#         'A'  => 'a',
-#         'I'  => 'i',
-#         'U'  => 'u',
-#         'E'  => 'e',
-#         'O'  => 'o');
+%mdcp   = ();                       # model copy
 
 
 # Speech Analysis/Synthesis Setting ==============
 # speech analysis
 $sr = @SAMPFREQ@;   # sampling rate (Hz)
 $fs = @FRAMESHIFT@; # frame period (point)
+$ft = @FFTLEN@;     # FFT length (point)
 $fw = @FREQWARP@;   # frequency warping
 $gm = @GAMMA@;      # pole/zero representation weight
 $lg = @LNGAIN@;     # use log gain instead of linear gain
@@ -188,10 +203,10 @@ $daem_nIte   = @DAEMNITER@;     # number of iterations of DAEM-based embedded tr
 $daem_alpha  = @DAEMALPHA@;     # schedule of updating temperature parameter for DAEM
 
 # generation
-$pgtype     = @PGTYPE@;     # parameter generation algorithm (0 -> Cholesky,  1 -> MixHidden,  2 -> StateHidden)
+$pgtype     = @PGTYPE@;     # parameter generation algorithm (0 -> Cholesky, 1 -> MixHidden, 2 -> StateHidden)
 $maxEMiter  = @MAXEMITER@;  # max EM iteration
 $EMepsilon  = @EMEPSILON@;  # convergence factor for EM iteration
-$useGV      = @USEGV@;      # turn on GV
+$useHmmGV   = @USEHMMGV@;   # turn on GV
 $maxGViter  = @MAXGVITER@;  # max GV iteration
 $GVepsilon  = @GVEPSILON@;  # convergence factor for GV iteration
 $minEucNorm = @MINEUCNORM@; # minimum Euclid norm for GV iteration
@@ -207,6 +222,24 @@ $useMSPF    = @USEMSPF@;    # use modulation spectrum-based postfilter
 $mspfLength = 25;           # frame length of modulation spectrum-based postfilter (odd number)
 $mspfFFTLen = 64;           # FFT length of modulation spectrum-based postfilter (even number)
 
+# neural network
+$useDNN       = @USEDNN@;         # train a deep neural network after HMM training
+$nHiddenUnits = '@NHIDDENUNITS@'; # number of hidden units in each layer
+$activation   = @ACTIVATION@;     # activation function for hidden units  (0 -> Linear, 1 -> Sigmoid, 2 -> Tanh, 3 -> ReLU)
+$optimizer    = @OPTIMIZER@;      # optimizer (0 -> SGD, 1 -> Momentum, 2 -> AdaGrad, 3-> AdaDelta, 4 -> Adam, 5 -> RMSprop)
+$learnRate    = @LEARNRATE@;      # learning rate
+$trjLearnRate = @TRJLEARNRATE@;   # learning rate for trajectory training
+$dnnGVWeight  = @DNNGVWEIGHT@;    # weight for GV
+$keepProb     = @KEEPPROB@;       # probability for not randomly setting activities to zero
+$queueSize    = @QUEUESIZE@;      # queue size
+$batchSize    = @BATCHSIZE@;      # mini-batch size
+$nEpoch       = @NEPOCH@;         # number of epochs
+$nTrjEpoch    = @NTRJEPOCH@;      # number of epochs for trajectory training
+$nThread      = @NTHREAD@;        # number of threads
+$randomSeed   = @RANDOMSEED@;     # random seed used for initialization
+$nKeep        = 5;                # number of models to keep
+$logInterval  = 100;              # output training log at regular steps
+$saveInterval = 10000;            # save model at regular steps
 
 
 # Directories & Commands ===============
@@ -215,6 +248,9 @@ $prjdir = '@PWD@';
 
 # Perl
 $PERL = '@PERL@';
+
+# Python
+$PYTHON = '@PYTHON@';
 
 # wc
 $WC = '@WC@';
@@ -231,45 +267,47 @@ $HMGENS    = '@HMGENS@';
 $ENGINE    = '@ENGINE@';
 
 # SPTK commands
-$X2X      = '@X2X@';
-$FREQT    = '@FREQT@';
-$C2ACR    = '@C2ACR@';
-$VOPR     = '@VOPR@';
-$VSUM     = '@VSUM@';
-$MC2B     = '@MC2B@';
-$SOPR     = '@SOPR@';
-$B2MC     = '@B2MC@';
-$EXCITE   = '@EXCITE@';
-$LSP2LPC  = '@LSP2LPC@';
-$MGC2MGC  = '@MGC2MGC@';
-$MGLSADF  = '@MGLSADF@';
-$MERGE    = '@MERGE@';
-$BCP      = '@BCP@';
-$LSPCHECK = '@LSPCHECK@';
-$MGC2SP   = '@MGC2SP@';
-$BCUT     = '@BCUT@';
-$VSTAT    = '@VSTAT@';
-$NAN      = '@NAN@';
-$DFS      = '@DFS@';
-$SWAB     = '@SWAB@';
-$RAW2WAV  = '@RAW2WAV@';
-$FRAME     = '@FRAME@';
-$WINDOW    = '@WINDOW@';
-$SPEC      = '@SPEC@';
-$TRANSPOSE = '@TRANSPOSE@';
-$PHASE     = '@PHASE@';
-$IFFTR     = '@IFFTR@';
+$X2X         = '@X2X@';
+$FREQT       = '@FREQT@';
+$C2ACR       = '@C2ACR@';
+$VOPR        = '@VOPR@';
+$VSUM        = '@VSUM@';
+$MC2B        = '@MC2B@';
+$SOPR        = '@SOPR@';
+$B2MC        = '@B2MC@';
+$EXCITE      = '@EXCITE@';
+$LSP2LPC     = '@LSP2LPC@';
+$MGC2MGC     = '@MGC2MGC@';
+$MGLSADF     = '@MGLSADF@';
+$MERGE       = '@MERGE@';
+$BCP         = '@BCP@';
+$LSPCHECK    = '@LSPCHECK@';
+$MGC2SP      = '@MGC2SP@';
+$BCUT        = '@BCUT@';
+$VSTAT       = '@VSTAT@';
+$NAN         = '@NAN@';
+$DFS         = '@DFS@';
+$SWAB        = '@SWAB@';
+$RAW2WAV     = '@RAW2WAV@';
+$FRAME       = '@FRAME@';
+$WINDOW      = '@WINDOW@';
+$SPEC        = '@SPEC@';
+$TRANSPOSE   = '@TRANSPOSE@';
+$PHASE       = '@PHASE@';
+$IFFTR       = '@IFFTR@';
+$MLPG        = '@MLPG@';
+$INTERPOLATE = '@INTERPOLATE@';
 
 # MATLAB & STRAIGHT
 $MATLAB   = '@MATLAB@';
 $STRAIGHT = '@STRAIGHT@';
 
 # WORLD
-$WORLD    = '@WORLD@';
+$WORLD = '@WORLD@';
 
 
 # Switch ================================
-$MKEMV = 1; # preparing environments
+$MKENV = 1; # preparing environments
 $HCMPV = 1; # computing a global variance
 $IN_RE = 1; # initialization & reestimation
 $MMMMF = 1; # making a monophone mmf
@@ -282,15 +320,24 @@ $UNTIE = 1; # untying the parameter sharing structure
 $ERST3 = 1; # embedded reestimation (untied)
 $CXCL2 = 1; # tree-based context clustering
 $ERST4 = 1; # embedded reestimation (re-clustered)
-$FALGN = 1; # forced alignment for no-silent GV
+$FALGN = 1; # forced alignment
 $MCDGV = 1; # making global variance
 $MKUNG = 1; # making unseen models (GV)
-$TMSPF = 1; # training modulation spectrum-based postfilter
+$MSPF1 = 1; # training modulation spectrum-based postfilter (1mix)
 $MKUN1 = 1; # making unseen models (1mix)
 $PGEN1 = 1; # generating speech parameter sequences (1mix)
 $WGEN1 = 1; # synthesizing waveforms (1mix)
 $CONVM = 1; # converting mmfs to the hts_engine file format
 $ENGIN = 1; # synthesizing waveforms using hts_engine
+$MKDAT = 1; # making training data for deep neural network
+$TRDNN = 1; # training a deep neural network
+$MSPFD = 1; # training modulation spectrum-based postfilter (dnn)
+$PGEND = 1; # generating speech parameter sequences (dnn)
+$WGEND = 1; # synthesizing waveforms (dnn)
+$TRJGV = 1; # trajectory training considering global variance
+$MSPFT = 1; # training modulation spectrum-based postfilter (trj)
+$PGENT = 1; # generating speech parameter sequences (trj)
+$WGENT = 1; # synthesizing waveforms (trj)
 $SEMIT = 1; # semi-tied covariance matrices
 $MKUNS = 1; # making unseen models (stc)
 $PGENS = 1; # generating speech parameter sequences (stc)
