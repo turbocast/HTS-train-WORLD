@@ -12,6 +12,8 @@
 //
 //-----------------------------------------------------------------------------
 
+#define ALPHA 0.55
+
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -208,7 +210,7 @@ int main(int argc, char *argv[]) {
     for(int i = 0; i < f0_length; i ++){
       delete [] world_parameters.spectrogram[i];
       for(int j = 0; j < fft_size / 2 + 1; j ++){
-        realspec[i][j] /=  32768.0;
+        realspec[i][j] /= 1e4;
       }
     }
     delete [] world_parameters.spectrogram;
@@ -236,9 +238,10 @@ int main(int argc, char *argv[]) {
     double PI = acos(-1);
     for(int i = 0; i < f0_length; i ++){
       realap[i] = new double[fft_size / 2 + 1];
-      mgc2sp(world_parameters.aperiodicity[i], apl, 0.77, 0, xx, yy, fft_size);
+      world_parameters.aperiodicity[i][0] += 9.210340;
+      mgc2sp(world_parameters.aperiodicity[i], apl, ALPHA, 0, xx, yy, fft_size);
       for (int j = 0; j < apl;j++){
-    		realap[i][j] = exp(xx[j]) / 32768.0;
+    		realap[i][j] = exp(xx[j]) / 1e4;
     	}
     }
     delete [] xx;

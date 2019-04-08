@@ -12,6 +12,8 @@
 //
 //-----------------------------------------------------------------------------
 
+#define ALPHA 0.55
+
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -185,24 +187,15 @@ void AperiodicityEstimation(double *x, int x_length,
     WorldParameters *world_parameters) {
   D4COption option = {0};
   InitializeD4COption(&option);
-
-  //int number_of_aperiodicities =
-  //  static_cast<int>(MyMinDouble(world::kUpperLimit, world_parameters->fs / 2.0 -
-  //    world::kFrequencyInterval) / world::kFrequencyInterval);
-
-  // Parameters setting and memory allocation.
+  option.threshold = 0;
+  
   world_parameters->aperiodicity = new double *[world_parameters->f0_length];
   for (int i = 0; i < world_parameters->f0_length; ++i) {
       world_parameters->aperiodicity[i] = 
         new double[world_parameters->fft_size / 2 + 1];
-    //world_parameters->aperiodicity[i] = new double[number_of_aperiodicities];
   }
 
-  //world_parameters->number_of_aperiodicities = number_of_aperiodicities;
-
   DWORD elapsed_time = timeGetTime();
-  // option is not implemented in this version. This is for future update.
-  // We can use "NULL" as the argument.
   D4C(x, x_length, world_parameters->fs, world_parameters->time_axis,
       world_parameters->f0, world_parameters->f0_length,
       world_parameters->fft_size, &option, world_parameters->aperiodicity);
@@ -301,8 +294,12 @@ int main(int argc, char *argv[]) {
     number_of_dimensions = atoi(argv[7]);
     double **coded_spectrogram = new double *[world_parameters.f0_length];
     for (int i = 0; i < world_parameters.f0_length; ++i){
-      for(int j = 0; j < world_parameters.fft_size / 2 + 1; j ++)
-        world_parameters.spectrogram[i][j] *= 32768.0;
+      for(int j = 0; j < world_parameters.fft_size / 2 + 1; j ++){
+        world_parameters.spectrogram[i][j] *= 1e4;
+        if(world_parameters.spectrogram[i][j] == 0.0){
+          world_parameters.spectrogram[i][j] = 0.0001;
+        }
+      }
       coded_spectrogram[i] = new double[number_of_dimensions];
     }
     CodeSpectralEnvelope(world_parameters.spectrogram, world_parameters.f0_length, world_parameters.fs,
@@ -336,13 +333,13 @@ int main(int argc, char *argv[]) {
     double **coded_aperiodicity = new double *[world_parameters.f0_length];
     for (int i = 0; i < world_parameters.f0_length; ++i){
       for(int j = 0; j < world_parameters.fft_size / 2 + 1; j ++)
-        world_parameters.aperiodicity[i][j] = world_parameters.aperiodicity[i][j] * 32768.0;
+        world_parameters.aperiodicity[i][j] = world_parameters.aperiodicity[i][j] * 1e4;
       coded_aperiodicity[i] = new double[number_of_aperiodicities];
     }
     for (int i = 0; i < world_parameters.f0_length; ++i){
       mcep(world_parameters.aperiodicity[i], world_parameters.fft_size / 2 + 1, coded_aperiodicity[i], 
         oddApl ? number_of_aperiodicities - 1 : number_of_aperiodicities,
-        0.77, 2, 0, 0.001, 1, 1.0E-8, 0.0, 3);
+        ALPHA, 2, 0, 0.001, 1, 1.0E-8, 0.0, 3);
       if(oddApl){
         coded_aperiodicity[i][number_of_aperiodicities - 1] = 0;
       }
@@ -350,6 +347,10 @@ int main(int argc, char *argv[]) {
     CodeSpectralEnvelope(world_parameters.aperiodicity, world_parameters.f0_length, world_parameters.fs,
       world_parameters.fft_size, number_of_aperiodicities, coded_aperiodicity);
     for(int i = 0; i < world_parameters.f0_length; i ++){
+      coded_aperiodicity[i][0] -= 9.210340;
+      if(coded_aperiodicity[i][0] - 0 > 0 && coded_aperiodicity[i][0] - 0 < 1e-4){
+        coded_aperiodicity[i][0] = 0;
+      }
       delete [] world_parameters.aperiodicity[i];
     }
     delete [] world_parameters.aperiodicity;
